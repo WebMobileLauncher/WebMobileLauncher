@@ -21,7 +21,6 @@ import android.content.res.Resources;
 import android.database.Cursor;
 import android.net.Uri;
 import android.os.Build;
-import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
 import android.os.Looper;
@@ -32,18 +31,12 @@ import android.util.DisplayMetrics;
 import android.util.Log;
 import android.view.View;
 import android.view.WindowManager;
-import android.widget.EditText;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.NotificationManagerCompat;
-import androidx.fragment.app.Fragment;
-import androidx.fragment.app.FragmentActivity;
-import androidx.fragment.app.FragmentTransaction;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -60,10 +53,8 @@ import net.kdt.pojavlaunch.utils.JREUtils;
 import net.kdt.pojavlaunch.utils.JSONUtils;
 import net.kdt.pojavlaunch.utils.OldVersionsUtils;
 import net.kdt.pojavlaunch.value.DependentLibrary;
-import net.kdt.pojavlaunch.value.MinecraftAccount;
 import net.kdt.pojavlaunch.value.MinecraftLibraryArtifact;
-import net.kdt.pojavlaunch.value.launcherprofiles.LauncherProfiles;
-import net.kdt.pojavlaunch.value.launcherprofiles.MinecraftProfile;
+import net.kdt.pojavlaunch.weblauncher.TemporaryLaunchSettings;
 
 import org.apache.commons.codec.binary.Hex;
 import org.apache.commons.io.IOUtils;
@@ -163,8 +154,8 @@ public final class Tools {
         NATIVE_LIB_DIR = ctx.getApplicationInfo().nativeLibraryDir;
     }
 
-    public static void launchMinecraft(final AppCompatActivity activity, MinecraftAccount minecraftAccount,
-                                       MinecraftProfile minecraftProfile, String versionId, int versionJavaRequirement) throws Throwable {
+    public static void launchMinecraft(final AppCompatActivity activity,
+                                       TemporaryLaunchSettings launchSettings, String versionId, int versionJavaRequirement) throws Throwable {
         int freeDeviceMemory = getFreeDeviceMemory(activity);
         if(LauncherPreferences.PREF_RAM_ALLOCATION > freeDeviceMemory) {
             LifecycleAwareAlertDialog.DialogCreator dialogCreator = (dialog, builder) ->
@@ -177,15 +168,14 @@ public final class Tools {
                 // to start after the activity is shown again
             }
         }
-        Runtime runtime = MultiRTUtils.forceReread(Tools.pickRuntime(minecraftProfile, versionJavaRequirement));
+        Runtime runtime = MultiRTUtils.forceReread(Tools.pickRuntime(launchSettings, versionJavaRequirement));
         JMinecraftVersionList.Version versionInfo = Tools.getVersionInfo(versionId);
-        LauncherProfiles.load();
-        File gamedir = Tools.getGameDirPath(minecraftProfile);
+        File gamedir = Tools.getGameDirPath(launchSettings);
 
 
         // Pre-process specific files
         disableSplash(gamedir);
-        String[] launchArgs = getMinecraftClientArgs(minecraftAccount, versionInfo, gamedir);
+        String[] launchArgs = getMinecraftClientArgs(launchSettings, versionInfo, gamedir);
 
         // Select the appropriate openGL version
         OldVersionsUtils.selectOpenGlVersion(versionInfo);
@@ -212,14 +202,14 @@ public final class Tools {
         javaArgList.addAll(Arrays.asList(launchArgs));
         // ctx.appendlnToLog("full args: "+javaArgList.toString());
         String args = LauncherPreferences.PREF_CUSTOM_JAVA_ARGS;
-        if(Tools.isValidString(minecraftProfile.javaArgs)) args = minecraftProfile.javaArgs;
+        if(Tools.isValidString(launchSettings.javaArgs)) args = launchSettings.javaArgs;
         FFmpegPlugin.discover(activity);
         JREUtils.launchJavaVM(activity, runtime, gamedir, javaArgList, args);
         // If we returned, this means that the JVM exit dialog has been shown and we don't need to be active anymore.
         // We never return otherwise. The process will be killed anyway, and thus we will become inactive
     }
 
-    public static File getGameDirPath(@NonNull MinecraftProfile minecraftProfile){
+    public static File getGameDirPath(@NonNull TemporaryLaunchSettings minecraftProfile){
         if(minecraftProfile.gameDir != null){
             if(minecraftProfile.gameDir.startsWith(Tools.LAUNCHERPROFILES_RTPREFIX))
                 return new File(minecraftProfile.gameDir.replace(Tools.LAUNCHERPROFILES_RTPREFIX,Tools.DIR_GAME_HOME+"/"));
@@ -331,8 +321,7 @@ public final class Tools {
         return JSONUtils.insertJSONValueList(minecraftArgs.toArray(new String[0]), varArgMap);
     }
 
-    public static String[] getMinecraftClientArgs(MinecraftAccount profile, JMinecraftVersionList.Version versionInfo, File gameDir) {
-        String username = profile.username;
+    public static String[] getMinecraftClientArgs(TemporaryLaunchSettings launchSettings, JMinecraftVersionList.Version versionInfo, File gameDir) {
         String versionName = versionInfo.id;
         if (versionInfo.inheritsFrom != null) {
             versionName = versionInfo.inheritsFrom;
@@ -341,11 +330,11 @@ public final class Tools {
         String userType = "mojang";
 
         Map<String, String> varArgMap = new ArrayMap<>();
-        varArgMap.put("auth_session", profile.accessToken); // For legacy versions of MC
-        varArgMap.put("auth_access_token", profile.accessToken);
-        varArgMap.put("auth_player_name", username);
-        varArgMap.put("auth_uuid", profile.profileId.replace("-", ""));
-        varArgMap.put("auth_xuid", profile.xuid);
+        varArgMap.put("auth_session", launchSettings.mcSession); // For legacy versions of MC
+        varArgMap.put("auth_access_token", launchSettings.mcAccessToken);
+        varArgMap.put("auth_player_name", launchSettings.mcUsername);
+        varArgMap.put("auth_uuid", launchSettings.mcUuid);
+        varArgMap.put("auth_xuid", launchSettings.mcXuid);
         varArgMap.put("assets_root", Tools.ASSETS_PATH);
         varArgMap.put("assets_index_name", versionInfo.assets);
         varArgMap.put("game_assets", Tools.ASSETS_PATH);
@@ -918,56 +907,6 @@ public final class Tools {
         return fileName;
     }
 
-    /** Swap the main fragment with another */
-    public static void swapFragment(FragmentActivity fragmentActivity , Class<? extends Fragment> fragmentClass,
-                                    @Nullable String fragmentTag, boolean addCurrentToBackstack, @Nullable Bundle bundle) {
-        // When people tab out, it might happen
-        //TODO handle custom animations
-        FragmentTransaction transaction = fragmentActivity.getSupportFragmentManager().beginTransaction()
-                .setReorderingAllowed(true)
-                .replace(R.id.container_fragment, fragmentClass, bundle, fragmentTag);
-        if(addCurrentToBackstack) transaction.addToBackStack(null);
-
-        transaction.commit();
-    }
-
-    /** Remove the current fragment */
-    public static void removeCurrentFragment(FragmentActivity fragmentActivity){
-        fragmentActivity.getSupportFragmentManager().popBackStackImmediate();
-    }
-
-    public static void installMod(Activity activity, boolean customJavaArgs) {
-        if (MultiRTUtils.getExactJreName(8) == null) {
-            Toast.makeText(activity, R.string.multirt_nojava8rt, Toast.LENGTH_LONG).show();
-            return;
-        }
-
-        if(!customJavaArgs){ // Launch the intent to get the jar file
-            if(!(activity instanceof LauncherActivity))
-                throw new IllegalStateException("Cannot start Mod Installer without LauncherActivity");
-            LauncherActivity launcherActivity = (LauncherActivity)activity;
-            launcherActivity.modInstallerLauncher.launch(null);
-            return;
-        }
-
-        // install mods with custom arguments
-        final EditText editText = new EditText(activity);
-        editText.setSingleLine();
-        editText.setHint("-jar/-cp /path/to/file.jar ...");
-
-        AlertDialog.Builder builder = new AlertDialog.Builder(activity)
-                .setTitle(R.string.alerttitle_installmod)
-                .setNegativeButton(android.R.string.cancel, null)
-                .setView(editText)
-                .setPositiveButton(android.R.string.ok, (di, i) -> {
-                    Intent intent = new Intent(activity, JavaGUILauncherActivity.class);
-                    intent.putExtra("skipDetectMod", true);
-                    intent.putExtra("javaArgs", editText.getText().toString());
-                    activity.startActivity(intent);
-                });
-        builder.show();
-    }
-
     /** Display and return a progress dialog, instructing to wait */
     private static ProgressDialog getWaitingDialog(Context ctx){
         final ProgressDialog barrier = new ProgressDialog(ctx);
@@ -1041,9 +980,9 @@ public final class Tools {
         return prefixedName.substring(Tools.LAUNCHERPROFILES_RTPREFIX.length());
     }
 
-    public static String getSelectedRuntime(MinecraftProfile minecraftProfile) {
+    public static String getSelectedRuntime(TemporaryLaunchSettings launchSettings) {
         String runtime = LauncherPreferences.PREF_DEFAULT_RUNTIME;
-        String profileRuntime = getRuntimeName(minecraftProfile.javaDir);
+        String profileRuntime = launchSettings.runtimeId;
         if(profileRuntime != null) {
             if(MultiRTUtils.forceReread(profileRuntime).versionString != null) {
                 runtime = profileRuntime;
@@ -1056,14 +995,14 @@ public final class Tools {
         MAIN_HANDLER.post(runnable);
     }
 
-    public static @NonNull String pickRuntime(MinecraftProfile minecraftProfile, int targetJavaVersion) {
-        String runtime = getSelectedRuntime(minecraftProfile);
-        String profileRuntime = getRuntimeName(minecraftProfile.javaDir);
+    public static @NonNull String pickRuntime(TemporaryLaunchSettings launchSettings, int targetJavaVersion) {
+        String runtime = getSelectedRuntime(launchSettings);
+        String profileRuntime = launchSettings.runtimeId;
         Runtime pickedRuntime = MultiRTUtils.read(runtime);
         if(runtime == null || pickedRuntime.javaVersion == 0 || pickedRuntime.javaVersion < targetJavaVersion) {
             String preferredRuntime = MultiRTUtils.getNearestJreName(targetJavaVersion);
             if(preferredRuntime == null) throw new RuntimeException("Failed to autopick runtime!");
-            if(profileRuntime != null) minecraftProfile.javaDir = Tools.LAUNCHERPROFILES_RTPREFIX+preferredRuntime;
+            if(profileRuntime != null) launchSettings.runtimeId = preferredRuntime;
             runtime = preferredRuntime;
         }
         return runtime;

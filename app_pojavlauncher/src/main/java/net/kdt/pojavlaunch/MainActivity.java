@@ -44,7 +44,6 @@ import androidx.drawerlayout.widget.DrawerLayout;
 
 import com.kdt.LoggerView;
 
-import net.kdt.pojavlaunch.lifecycle.ContextExecutor;
 import net.kdt.pojavlaunch.customcontrols.ControlButtonMenuListener;
 import net.kdt.pojavlaunch.customcontrols.ControlData;
 import net.kdt.pojavlaunch.customcontrols.ControlDrawerData;
@@ -54,13 +53,13 @@ import net.kdt.pojavlaunch.customcontrols.CustomControls;
 import net.kdt.pojavlaunch.customcontrols.EditorExitable;
 import net.kdt.pojavlaunch.customcontrols.keyboard.LwjglCharSender;
 import net.kdt.pojavlaunch.customcontrols.keyboard.TouchCharInput;
+import net.kdt.pojavlaunch.lifecycle.ContextExecutor;
 import net.kdt.pojavlaunch.prefs.LauncherPreferences;
 import net.kdt.pojavlaunch.services.GameService;
 import net.kdt.pojavlaunch.utils.JREUtils;
 import net.kdt.pojavlaunch.utils.MCOptionUtils;
 import net.kdt.pojavlaunch.value.MinecraftAccount;
-import net.kdt.pojavlaunch.value.launcherprofiles.LauncherProfiles;
-import net.kdt.pojavlaunch.value.launcherprofiles.MinecraftProfile;
+import net.kdt.pojavlaunch.weblauncher.TemporaryLaunchSettings;
 
 import org.lwjgl.glfw.CallbackBridge;
 
@@ -70,7 +69,7 @@ import java.io.IOException;
 public class MainActivity extends BaseActivity implements ControlButtonMenuListener, EditorExitable, ServiceConnection {
     public static volatile ClipboardManager GLOBAL_CLIPBOARD;
     public static final String INTENT_MINECRAFT_VERSION = "intent_version";
-
+    public static final String INTENT_MINECRAFT_LAUNCH_SETTINGS = "intent_launch_settings";
     volatile public static boolean isInputStackCall;
 
     public static TouchCharInput touchCharInput;
@@ -83,7 +82,7 @@ public class MainActivity extends BaseActivity implements ControlButtonMenuListe
     private GyroControl mGyroControl = null;
     public static ControlLayout mControlLayout;
 
-    MinecraftProfile minecraftProfile;
+    TemporaryLaunchSettings launchSettings;
 
     private ArrayAdapter<String> gameActionArrayAdapter;
     private AdapterView.OnItemClickListener gameActionClickListener;
@@ -94,8 +93,14 @@ public class MainActivity extends BaseActivity implements ControlButtonMenuListe
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        minecraftProfile = LauncherProfiles.getCurrentProfile();
-        MCOptionUtils.load(Tools.getGameDirPath(minecraftProfile).getAbsolutePath());
+
+        readLaunchSettings();
+        if(launchSettings == null) {
+            Log.w("Launcher", "TemporaryLaunchSettings are missing, Using the default. Unexpected behaviour might occur.");
+            launchSettings = new TemporaryLaunchSettings();
+        }
+
+        MCOptionUtils.load(Tools.getGameDirPath(launchSettings).getAbsolutePath());
 
         Intent gameServiceIntent = new Intent(this, GameService.class);
         // Start the service a bit early
@@ -139,6 +144,14 @@ public class MainActivity extends BaseActivity implements ControlButtonMenuListe
         bindService(gameServiceIntent, this, 0);
     }
 
+    private void readLaunchSettings() {
+        Intent intent = getIntent();
+        if(intent == null) return;
+        Bundle extras = intent.getExtras();
+        if(extras == null) return;
+        launchSettings = (TemporaryLaunchSettings) extras.getSerializable("launchSettings");
+    }
+
     protected void initLayout(int resId) {
         setContentView(resId);
         bindValues();
@@ -156,17 +169,17 @@ public class MainActivity extends BaseActivity implements ControlButtonMenuListe
             GLOBAL_CLIPBOARD = (ClipboardManager) getSystemService(CLIPBOARD_SERVICE);
             touchCharInput.setCharacterSender(new LwjglCharSender());
 
-            if(minecraftProfile.pojavRendererName != null) {
-                Log.i("RdrDebug","__P_renderer="+minecraftProfile.pojavRendererName);
-                Tools.LOCAL_RENDERER = minecraftProfile.pojavRendererName;
+            if(launchSettings.renderer != null) {
+                Log.i("LaunchSettings", "Renderer overridden, using "+launchSettings.renderer);
+                Tools.LOCAL_RENDERER = launchSettings.renderer;
             }
 
-            setTitle("Minecraft " + minecraftProfile.lastVersionId);
+            setTitle("Minecraft " + launchSettings.versionId);
 
             // Minecraft 1.13+
 
             String version = getIntent().getStringExtra(INTENT_MINECRAFT_VERSION);
-            version = version == null ? minecraftProfile.lastVersionId : version;
+            version = version == null ? launchSettings.versionId : version;
 
             JMinecraftVersionList.Version mVersionInfo = Tools.getVersionInfo(version);
             isInputStackCall = mVersionInfo.arguments != null;
@@ -218,9 +231,9 @@ public class MainActivity extends BaseActivity implements ControlButtonMenuListe
         try {
             // Load keys
             mControlLayout.loadLayout(
-                    minecraftProfile.controlFile == null
+                    launchSettings.controlFile == null
                             ? LauncherPreferences.PREF_DEFAULTCTRL_PATH
-                            : Tools.CTRLMAP_PATH + "/" + minecraftProfile.controlFile);
+                            : Tools.CTRLMAP_PATH + "/" + launchSettings.controlFile);
         } catch(IOException e) {
             try {
                 Log.w("MainActivity", "Unable to load the control file, loading the default now", e);
@@ -344,12 +357,11 @@ public class MainActivity extends BaseActivity implements ControlButtonMenuListe
         }
         MinecraftAccount minecraftAccount = PojavProfile.getCurrentProfileContent(this, null);
         Logger.appendToLog("--------- beginning with launcher debug");
-        printLauncherInfo(versionId, Tools.isValidString(minecraftProfile.javaArgs) ? minecraftProfile.javaArgs : LauncherPreferences.PREF_CUSTOM_JAVA_ARGS);
+        printLauncherInfo(versionId, Tools.isValidString(launchSettings.javaArgs) ? launchSettings.javaArgs : LauncherPreferences.PREF_CUSTOM_JAVA_ARGS);
         JREUtils.redirectAndPrintJRELog();
-        LauncherProfiles.load();
         int requiredJavaVersion = 8;
         if(version.javaVersion != null) requiredJavaVersion = version.javaVersion.majorVersion;
-        Tools.launchMinecraft(this, minecraftAccount, minecraftProfile, versionId, requiredJavaVersion);
+        Tools.launchMinecraft(this, launchSettings, versionId, requiredJavaVersion);
         //Note that we actually stall in the above function, even if the game crashes. But let's be safe.
         Tools.runOnUiThread(()-> mServiceBinder.isActive = false);
     }
@@ -613,9 +625,9 @@ public class MainActivity extends BaseActivity implements ControlButtonMenuListe
             MainActivity.mControlLayout.setModifiable(false);
             System.gc();
             MainActivity.mControlLayout.loadLayout(
-                    minecraftProfile.controlFile == null
+                    launchSettings.controlFile == null
                             ? LauncherPreferences.PREF_DEFAULTCTRL_PATH
-                            : Tools.CTRLMAP_PATH + "/" + minecraftProfile.controlFile);
+                            : Tools.CTRLMAP_PATH + "/" +launchSettings.controlFile);
             mDrawerPullButton.setVisibility(mControlLayout.hasMenuButton() ? View.GONE : View.VISIBLE);
         } catch (IOException e) {
             Tools.showError(this,e);

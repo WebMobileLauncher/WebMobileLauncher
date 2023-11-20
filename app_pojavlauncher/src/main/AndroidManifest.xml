@@ -52,7 +52,7 @@
             </intent-filter>
         </activity>
         <activity
-            android:name=".LauncherActivity"
+            android:name=".WebLauncherActivity"
             android:label="@string/app_short_name" />
         <activity
             android:name=".ImportControlActivity"

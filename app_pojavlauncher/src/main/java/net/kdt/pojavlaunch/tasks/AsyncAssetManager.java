@@ -85,8 +85,6 @@ public class AsyncAssetManager {
                 // we repack them to a single file here
                 unpackComponent(ctx, "lwjgl3", false);
                 unpackComponent(ctx, "security", true);
-                unpackComponent(ctx, "arc_dns_injector", true);
-                unpackComponent(ctx, "forge_installer", true);
             } catch (IOException e) {
                 Log.e("AsyncAssetManager", "Failed o unpack components !",e );
             }
