@@ -17,6 +17,7 @@ public class DownloadMirror {
     public static final int DOWNLOAD_CLASS_LIBRARIES = 0;
     public static final int DOWNLOAD_CLASS_METADATA = 1;
     public static final int DOWNLOAD_CLASS_ASSETS = 2;
+    public static final int DOWNLOAD_CLASS_UNCLASSIFIED = -1;
 
     private static final String URL_PROTOCOL_TAIL = "://";
     private static final String[] MIRROR_BMCLAPI = {
@@ -42,13 +43,15 @@ public class DownloadMirror {
      */
     public static void downloadFileMirrored(int downloadClass, String urlInput, File outputFile,
                                             @Nullable byte[] buffer, Tools.DownloaderFeedback monitor) throws IOException {
-        try {
-            DownloadUtils.downloadFileMonitored(getMirrorMapping(downloadClass, urlInput),
-                    outputFile, buffer, monitor);
-            return;
-        }catch (FileNotFoundException e) {
-            Log.w("DownloadMirror", "Cannot find the file on the mirror", e);
-            Log.i("DownloadMirror", "Failling back to default source");
+        if(downloadClass != DOWNLOAD_CLASS_UNCLASSIFIED) {
+            try {
+                DownloadUtils.downloadFileMonitored(getMirrorMapping(downloadClass, urlInput),
+                        outputFile, buffer, monitor);
+                return;
+            } catch (FileNotFoundException e) {
+                Log.w("DownloadMirror", "Cannot find the file on the mirror", e);
+                Log.i("DownloadMirror", "Failling back to default source");
+            }
         }
         DownloadUtils.downloadFileMonitored(urlInput, outputFile, buffer, monitor);
     }

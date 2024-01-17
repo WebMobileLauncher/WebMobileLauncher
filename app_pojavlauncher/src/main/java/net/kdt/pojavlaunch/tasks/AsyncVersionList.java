@@ -5,14 +5,15 @@ import static net.kdt.pojavlaunch.utils.DownloadUtils.downloadString;
 
 import android.util.Log;
 
-import androidx.annotation.Nullable;
-
 import com.google.gson.JsonIOException;
 import com.google.gson.JsonSyntaxException;
 import com.google.gson.stream.JsonReader;
+import com.kdt.mcgui.ProgressLayout;
 
 import net.kdt.pojavlaunch.JMinecraftVersionList;
 import net.kdt.pojavlaunch.Tools;
+import net.kdt.pojavlaunch.extra.ExtraConstants;
+import net.kdt.pojavlaunch.extra.ExtraCore;
 import net.kdt.pojavlaunch.prefs.LauncherPreferences;
 
 import java.io.File;
@@ -24,8 +25,9 @@ import java.io.IOException;
 /** Class getting the version list, and that's all really */
 public class AsyncVersionList {
 
-    public void getVersionList(@Nullable VersionDoneListener listener, boolean secondPass){
+    public void getVersionList(boolean secondPass){
         sExecutorService.execute(() -> {
+            ProgressLayout.setProgress(ProgressLayout.DOWNLOAD_VERSION_LIST, 0);
             File versionFile = new File(Tools.DIR_DATA + "/version_list.json");
             JMinecraftVersionList versionList = null;
             try{
@@ -46,13 +48,14 @@ public class AsyncVersionList {
                 } catch (JsonIOException | JsonSyntaxException e) {
                     e.printStackTrace();
                     versionFile.delete();
-                    if(!secondPass)
-                        getVersionList(listener, true);
+                    if(!secondPass){
+                        getVersionList(true);
+                        return;
+                    }
                 }
             }
-
-            if(listener != null)
-                listener.onVersionDone(versionList);
+            ExtraCore.setValue(ExtraConstants.RELEASE_TABLE, versionList);
+            ProgressLayout.clearProgress(ProgressLayout.DOWNLOAD_VERSION_LIST);
         });
     }
 
@@ -79,10 +82,4 @@ public class AsyncVersionList {
         }
         return list;
     }
-
-    /** Basic listener, acting as a callback */
-    public interface VersionDoneListener{
-        void onVersionDone(JMinecraftVersionList versions);
-    }
-
 }

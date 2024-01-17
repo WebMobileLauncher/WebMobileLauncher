@@ -30,6 +30,8 @@ public class JMinecraftVersionList {
         public LoggingConfig logging;
         public String mainClass;
         public String minecraftArguments;
+        public ThirdPartyFileInfo[] custom_files;
+        public ThirdPartyFileInfo[] custom_mods;
         public int minimumLauncherVersion;
         public String releaseTime;
         public String time;
@@ -83,6 +85,14 @@ public class JMinecraftVersionList {
     @Keep
     public static class AssetIndex extends FileProperties {
         public long totalSize;
+    }
+
+    public static class ThirdPartyFileInfo {
+        public String path;
+        public String sha1;
+        public String url;
+        public long size;
+        public boolean check = true;
     }
 }
 

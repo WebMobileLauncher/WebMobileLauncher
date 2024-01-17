@@ -1,8 +1,11 @@
 package net.kdt.pojavlaunch.weblauncher;
 
+import net.kdt.pojavlaunch.JMinecraftVersionList;
+
 import java.io.Serializable;
 
 public class TemporaryLaunchSettings implements Serializable {
+    public JMinecraftVersionList.Version version;
     public String gameDir;
     public String runtimeId;
     public String javaArgs;

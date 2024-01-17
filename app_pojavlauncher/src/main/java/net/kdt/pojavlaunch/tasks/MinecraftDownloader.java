@@ -31,6 +31,7 @@ import java.util.ArrayList;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.Future;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
@@ -38,6 +39,7 @@ import java.util.concurrent.atomic.AtomicReference;
 
 public class MinecraftDownloader {
     public static final String MINECRAFT_RES = "https://resources.download.minecraft.net/";
+    private static Future<?> sDownloaderFuture;
     private AtomicReference<Exception> mDownloaderThreadException;
     private ArrayList<DownloaderTask> mScheduledDownloadTasks;
     private AtomicLong mDownloadFileCounter;
@@ -56,17 +58,23 @@ public class MinecraftDownloader {
      * @param listener The download status listener
      */
     public void start(@Nullable Activity activity, @Nullable JMinecraftVersionList.Version version,
-                      @NonNull String realVersion, // this was there for a reason
-                      @NonNull AsyncMinecraftDownloader.DoneListener listener) {
-        sExecutorService.execute(() -> {
+                        @NonNull String realVersion, // this was there for a reason
+                        @NonNull File gameDirectory,
+                        @NonNull AsyncMinecraftDownloader.DoneListener listener) {
+        sDownloaderFuture = sExecutorService.submit(() -> {
             try {
-                downloadGame(activity, version, realVersion);
+                downloadGame(activity, version, realVersion, gameDirectory);
                 listener.onDownloadDone();
-            }catch (Exception e) {
+            }catch (InterruptedException ignored) {
+            } catch (Exception e) {
                 listener.onDownloadFailed(e);
             }
             ProgressLayout.clearProgress(ProgressLayout.DOWNLOAD_MINECRAFT);
         });
+    }
+
+    public static void cancelDownload() {
+        if(sDownloaderFuture != null) sDownloaderFuture.cancel(true);
     }
 
     /**
@@ -76,7 +84,8 @@ public class MinecraftDownloader {
      * @param versionName The version ID (necessary)
      * @throws Exception when an exception occurs in the function body or in any of the downloading threads.
      */
-    private void downloadGame(Activity activity, JMinecraftVersionList.Version verInfo, String versionName) throws Exception {
+    private void downloadGame(Activity activity, JMinecraftVersionList.Version verInfo, String versionName,
+                              File gameDirectory) throws Exception {
         // Put up a dummy progress line, for the activity to start the service and do all the other necessary
         // work to keep the launcher alive. We will replace this line when we will start downloading stuff.
         ProgressLayout.setProgress(ProgressLayout.DOWNLOAD_MINECRAFT, 0, R.string.newdl_starting);
@@ -87,7 +96,7 @@ public class MinecraftDownloader {
         mDownloadSizeCounter = new AtomicLong(0);
         mDownloaderThreadException = new AtomicReference<>(null);
 
-        if(!downloadAndProcessMetadata(activity, verInfo, versionName)) {
+        if(!downloadAndProcessMetadata(activity, verInfo, versionName, gameDirectory)) {
             throw new RuntimeException(activity.getString(R.string.exception_failed_to_unpack_jre17));
         }
 
@@ -120,6 +129,7 @@ public class MinecraftDownloader {
             // Interrupted while waiting, which means that the download was cancelled.
             // Kill all downloading threads immediately, and ignore any exceptions thrown by them
             downloaderPool.shutdownNow();
+            throw e;
         }
     }
 
@@ -129,6 +139,51 @@ public class MinecraftDownloader {
 
     private File createGameJarPath(String versionId) {
         return new File(Tools.DIR_HOME_VERSION, versionId + File.separator + versionId + ".jar");
+    }
+
+    private void scheduleThirdPartyAssets(JMinecraftVersionList.Version version, File destination) throws IOException{
+        scheduleCustomMods(version.custom_mods, destination);
+        scheduleCustomFiles(version.custom_files, destination);
+    }
+
+    private void scheduleCustomMods(JMinecraftVersionList.ThirdPartyFileInfo[] customMods,
+                                    File destination) throws IOException {
+        if(customMods == null) return;
+        ArrayList<String> presentModNames = new ArrayList<>(customMods.length);
+        for(JMinecraftVersionList.ThirdPartyFileInfo thirdPartyFileInfo : customMods) {
+            File downloadDestination = new File(destination, thirdPartyFileInfo.path);
+            presentModNames.add(downloadDestination.getName());
+            scheduleCustomFile(thirdPartyFileInfo, downloadDestination);
+        }
+        File modsFolder = new File(destination, "mods");
+        FileUtils.ensureDirectory(modsFolder);
+        File[] modFiles = modsFolder.listFiles();
+        if(modFiles == null) return;
+        for(File file : modFiles) {
+            String fileName = file.getName();
+            if(!presentModNames.contains(fileName) && !file.delete())
+                throw new IOException("Unable to delete mod " + fileName);
+        }
+    }
+
+    private void scheduleCustomFiles(JMinecraftVersionList.ThirdPartyFileInfo[] customFiles,
+                                     File destination) throws IOException {
+        if(customFiles == null) return;
+        for(JMinecraftVersionList.ThirdPartyFileInfo thirdPartyFileInfo : customFiles) {
+            scheduleCustomFile(thirdPartyFileInfo, new File(destination, thirdPartyFileInfo.path));
+        }
+    }
+
+    private void scheduleCustomFile(JMinecraftVersionList.ThirdPartyFileInfo fileInfo, File path)
+                                                                            throws IOException {
+        scheduleDownload(
+                path,
+                DownloadMirror.DOWNLOAD_CLASS_UNCLASSIFIED,
+                fileInfo.url,
+                fileInfo.check ? fileInfo.sha1 : null,
+                fileInfo.size,
+                false
+        );
     }
 
     /**
@@ -193,7 +248,10 @@ public class MinecraftDownloader {
      * @return false if JRE17 installation failed, true otherwise
      * @throws IOException if the download of any of the metadata files fails
      */
-    private boolean downloadAndProcessMetadata(Activity activity, JMinecraftVersionList.Version verInfo, String versionName) throws IOException, MirrorTamperedException {
+    private boolean downloadAndProcessMetadata(Activity activity,
+                                               JMinecraftVersionList.Version verInfo,
+                                               String versionName,
+                                               File gameDirectory) throws IOException, MirrorTamperedException {
         File versionJsonFile;
         if(verInfo != null) versionJsonFile = downloadGameJson(verInfo);
         else versionJsonFile = createGameJsonPath(versionName);
@@ -218,10 +276,13 @@ public class MinecraftDownloader {
 
         if(verInfo.logging != null) scheduleLoggingAssetDownloadIfNeeded(verInfo.logging);
 
+        if(gameDirectory != null) scheduleThirdPartyAssets(verInfo, gameDirectory);
+
         if(Tools.isValidString(verInfo.inheritsFrom)) {
             JMinecraftVersionList.Version inheritedVersion = AsyncMinecraftDownloader.getListedVersion(verInfo.inheritsFrom);
             // Infinite inheritance !?! :noway:
-            return downloadAndProcessMetadata(activity, inheritedVersion, verInfo.inheritsFrom);
+            // Keep the third party assets only for the first inheritance level, to avoid mod clashes.
+            return downloadAndProcessMetadata(activity, inheritedVersion, verInfo.inheritsFrom, null);
         }
         return true;
     }
