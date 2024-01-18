@@ -1,23 +1,80 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <!-- Light or not? -->
-    <style name="AppTheme" parent="@style/Theme.AppCompat.NoActionBar">
-        <item name="windowNoTitle">true</item>
-        <item name="windowActionBar">false</item>
-        <item name="android:windowContentOverlay">@null</item>
-        <item name="android:statusBarColor">@color/background_status_bar</item>
-        <item name="android:navigationBarColor">@android:color/transparent</item>
-        <item name="preferenceTheme">@style/PreferenceThemeOverlay.v14.Material</item>
-
-        <item name="android:textSize">@dimen/_12ssp</item>
-
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <style name="CubixLauncher" parent="Theme.AppCompat.Light.NoActionBar">
+        <item name="android:windowBackground">@color/color_common_background</item>
+        <item name="seekBarStyle">@style/CubixLauncher.SeekBar</item>
+        <item name="checkboxStyle">@style/CubixLauncher.CheckBox</item>
+        <!-- <item name="fontFamily">@font/proxima_nova</item> -->
+        <item name="android:checkboxStyle">@style/CubixLauncher.CheckBox</item>
+        <item name="android:progressBarStyleHorizontal">@style/CubixLauncher.ProgressBar</item>
+        <item name="android:textAppearance">@style/TextAppearance.CubixLauncher</item>
+        <item name="checkBoxPreferenceStyle">@style/CubixLauncher.CheckBoxPreference</item>
+        <item name="android:forceDarkAllowed" tools:targetApi="q">false</item>
+        <item name="android:windowLayoutInDisplayCutoutMode" tools:targetApi="o_mr1">shortEdges</item>
+        <item name="textAppearanceListItem">@style/TextAppearance.CubixLauncher.Bold</item>
+        <item name="android:textAppearanceListItem">@style/TextAppearance.CubixLauncher.Bold</item>
     </style>
-
-
-    <style name="ThickDivider">
-        <item name="android:layout_width">match_parent</item>
-        <item name="android:layout_height">@dimen/_1sdp</item>
-        <item name="android:background">?android:attr/listDivider</item>
+    <style name="TextAppearance.CubixLauncher" parent="TextAppearance.AppCompat">
+        <item name="android:textColor">@color/color_text_primary</item>
+        <item name="android:textColorPrimary">@color/color_text_primary</item>
+        <item name="android:textColorSecondary">@color/color_text_secondary</item>
+        <item name="android:background">@android:color/transparent</item>
     </style>
-
+    <style name="TextAppearance.CubixLauncher.Bold" parent="TextAppearance.CubixLauncher">
+        <item name="android:textStyle">bold</item>
+    </style>
+    <style name="CubixLauncher.SeekBar" parent="Widget.AppCompat.SeekBar">
+        <item name="android:progressDrawable">@drawable/theme_states_slider</item>
+        <item name="android:thumb">@drawable/theme_settings_knob</item>
+        <item name="android:maxHeight">8dp</item>
+        <item name="android:minHeight">8dp</item>
+        <item name="android:splitTrack">false</item>
+        <item name="android:thumbOffset">0dp</item>
+    </style>
+    <style name="CubixLauncher.CheckBox" parent="Widget.AppCompat.CompoundButton.CheckBox">
+        <item name="android:showText">false</item>
+        <item name="showText">false</item>
+        <item name="android:button">@drawable/theme_switch_knob_states</item>
+        <item name="buttonCompat">@drawable/theme_switch_knob_states</item>
+        <item name="android:minWidth">24dp</item>
+        <item name="android:minHeight">24dp</item>
+        <item name="minWidth">24dp</item>
+        <item name="minHeight">24dp</item>
+    </style>
+    <style name="CubixLauncher.SettingsButton" parent="Widget.AppCompat.Button">
+        <item name="android:textColor">@color/color_button_settings_fg</item>
+        <item name="android:background">@drawable/theme_background_button_settings</item>
+        <item name="android:textAllCaps">false</item>
+    </style>
+    <style name="CubixLauncher.DefaultButton" parent="Widget.AppCompat.Button">
+        <item name="android:textColor">@color/color_button_background</item>
+        <item name="android:background">@drawable/theme_background_default_button</item>
+        <item name="android:textAllCaps">false</item>
+        <item name="android:textSize">20sp</item>
+        <item name="android:textStyle">bold</item>
+    </style>
+    <style name="CubixLauncher.DangerButton" parent="CubixLauncher.DefaultButton">
+        <item name="android:background">@drawable/theme_background_dangerous_button</item>
+        <item name="android:textAllCaps">false</item>
+        <item name="android:textSize">20sp</item>
+        <item name="android:textStyle">bold</item>
+    </style>
+    <style name="CubixLauncher.EditText" parent="Widget.AppCompat.EditText">
+        <item name="android:background">@drawable/theme_background_edittext</item>
+        <item name="android:textColorHint">@color/color_text_tooltip</item>
+        <item name="android:textColor">@color/color_text_field_foreground</item>
+        <item name="android:paddingTop">16dp</item>
+        <item name="android:paddingBottom">16dp</item>
+        <item name="android:paddingStart">16dp</item>
+        <item name="android:paddingEnd">16dp</item>
+        <item name="maxHeight">45dp</item>
+        <item name="android:maxHeight">45dp</item>
+    </style>
+    <style name="CubixLauncher.ProgressBar" parent="Widget.AppCompat.ProgressBar.Horizontal">
+        <item name="android:progressDrawable">@drawable/theme_progressbar_states</item>
+        <item name="android:indeterminateDrawable">@drawable/theme_progressbar_states</item>
+    </style>
+    <style name="CubixLauncher.CheckBoxPreference" parent="Preference.CheckBoxPreference.Material">
+        <item name="android:layout">@layout/checkboxpreference_item</item>
+    </style>
 </resources>

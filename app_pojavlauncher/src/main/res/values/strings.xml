@@ -371,4 +371,8 @@
     <string name="newdl_starting">Reading game metadata…</string>
     <string name="newdl_downloading_metadata">Downloading game metadata (%s)</string>
     <string name="newdl_downloading_game_files">Downloading game files… (%d/%d, %.2f MB)</string>
+    <string name="settings_main">Video settings</string>
+    <string name="setings_control">Control settings</string>
+    <string name="reset_to_default">Reset to defaults</string>
+    <string name="open_game_dir_btn">Open game directory</string>
 </resources>

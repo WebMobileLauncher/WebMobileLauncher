@@ -1,9 +1,11 @@
 package net.kdt.pojavlaunch.weblauncher;
 
 import android.app.Activity;
+import android.content.Intent;
 import android.webkit.JavascriptInterface;
 
 import net.kdt.pojavlaunch.JMinecraftVersionList;
+import net.kdt.pojavlaunch.SettingsActivity;
 import net.kdt.pojavlaunch.Tools;
 import net.kdt.pojavlaunch.lifecycle.ContextAwareDoneListener;
 import net.kdt.pojavlaunch.tasks.AsyncMinecraftDownloader;
@@ -34,5 +36,11 @@ public class LaunchInterface {
                         launchSettings
                 )
         );
+    }
+
+    @JavascriptInterface
+    @SuppressWarnings("unused")
+    public void openSettings() {
+        activity.startActivity(new Intent(activity, SettingsActivity.class));
     }
 }

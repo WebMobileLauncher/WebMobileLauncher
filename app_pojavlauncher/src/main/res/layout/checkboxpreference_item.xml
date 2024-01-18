@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:minHeight="?android:attr/listPreferredItemHeightSmall"
+    android:gravity="center_vertical"
+    android:paddingLeft="?android:attr/listPreferredItemPaddingLeft"
+    android:paddingStart="?android:attr/listPreferredItemPaddingStart"
+    android:paddingRight="?android:attr/listPreferredItemPaddingRight"
+    android:paddingEnd="?android:attr/listPreferredItemPaddingEnd"
+    android:background="?android:attr/selectableItemBackground"
+    android:clipToPadding="false"
+    android:baselineAligned="false">
+
+
+    <RelativeLayout
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:paddingTop="16dp"
+        android:paddingBottom="16dp">
+
+        <LinearLayout
+            android:id="@+id/linear_layout_button_storage"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+
+            <LinearLayout
+                android:id="@android:id/widget_frame"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:gravity="start|center_vertical"
+                android:orientation="vertical" />
+
+            <TextView
+                android:id="@android:id/title"
+                android:layout_width="wrap_content"
+                android:layout_height="match_parent"
+                android:ellipsize="marquee"
+                android:gravity="center"
+                android:paddingStart="8dp"
+                android:singleLine="true"
+                android:textAppearance="?android:attr/textAppearanceListItem" />
+        </LinearLayout>
+
+        <TextView
+            android:id="@android:id/summary"
+            android:paddingTop="8dp"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_below="@id/linear_layout_button_storage"
+            android:layout_alignStart="@id/linear_layout_button_storage"
+            android:layout_alignLeft="@id/linear_layout_button_storage"
+            android:layout_gravity="start"
+            android:maxLines="10"
+            android:textAlignment="viewStart"
+            android:textColor="?android:attr/textColorSecondary" />
+
+    </RelativeLayout>
+
+    <!-- Preference should place its actual preference widget here. -->
+
+</LinearLayout>

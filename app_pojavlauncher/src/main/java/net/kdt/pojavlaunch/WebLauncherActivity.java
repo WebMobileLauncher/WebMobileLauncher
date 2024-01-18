@@ -24,7 +24,7 @@ import net.kdt.pojavlaunch.tasks.MinecraftDownloader;
 import net.kdt.pojavlaunch.utils.NotificationUtils;
 import net.kdt.pojavlaunch.weblauncher.LaunchInterface;
 
-public class WebLauncherActivity extends AppCompatActivity implements TaskPriorityManager.Listener {
+public class WebLauncherActivity extends BaseActivity implements TaskPriorityManager.Listener {
     private WebView mWebView;
     private View mProgressView;
     private View mCancelButton;
@@ -73,7 +73,10 @@ public class WebLauncherActivity extends AppCompatActivity implements TaskPriori
         addWebInterfaces();
 
         if(savedInstanceState != null) mWebView.restoreState(savedInstanceState);
-        else mWebView.loadUrl("javascript:LaunchInterface.startGame(\"{\\\"versionId\\\":\\\"1.12.2\\\"}\");");
+        else {
+            //mWebView.loadUrl("javascript:LaunchInterface.startGame(\"{\\\"versionId\\\":\\\"1.12.2\\\"}\");");
+            mWebView.loadUrl("javascript:LaunchInterface.openSettings();");
+        }
     }
 
     @SuppressLint("SetJavaScriptEnabled")
