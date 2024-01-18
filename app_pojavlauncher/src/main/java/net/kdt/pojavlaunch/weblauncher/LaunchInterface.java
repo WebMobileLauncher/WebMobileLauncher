@@ -8,6 +8,7 @@ import net.kdt.pojavlaunch.JMinecraftVersionList;
 import net.kdt.pojavlaunch.SettingsActivity;
 import net.kdt.pojavlaunch.Tools;
 import net.kdt.pojavlaunch.lifecycle.ContextAwareDoneListener;
+import net.kdt.pojavlaunch.progresskeeper.ProgressKeeper;
 import net.kdt.pojavlaunch.tasks.AsyncMinecraftDownloader;
 import net.kdt.pojavlaunch.tasks.MinecraftDownloader;
 
@@ -21,7 +22,10 @@ public class LaunchInterface {
     @JavascriptInterface
     @SuppressWarnings("unused")
     public void startGame(String gameLaunchConfig) {
-        InterfaceUtils.checkForOngoingProgress();
+        ProgressKeeper.waitUntilDone(()->internalLaunchGame(gameLaunchConfig));
+    }
+
+    private void internalLaunchGame(String gameLaunchConfig) {
         TemporaryLaunchSettings launchSettings = Tools.GLOBAL_GSON.fromJson(gameLaunchConfig, TemporaryLaunchSettings.class);
         JMinecraftVersionList.Version version = launchSettings.version;
         if(version == null) version = AsyncMinecraftDownloader.getListedVersion(launchSettings.versionId);

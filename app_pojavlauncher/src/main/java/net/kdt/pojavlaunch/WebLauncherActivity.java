@@ -74,8 +74,8 @@ public class WebLauncherActivity extends BaseActivity implements TaskPriorityMan
 
         if(savedInstanceState != null) mWebView.restoreState(savedInstanceState);
         else {
-            //mWebView.loadUrl("javascript:LaunchInterface.startGame(\"{\\\"versionId\\\":\\\"1.12.2\\\"}\");");
-            mWebView.loadUrl("javascript:LaunchInterface.openSettings();");
+            mWebView.loadUrl("javascript:LaunchInterface.startGame(\"{\\\"versionId\\\":\\\"1.12.2\\\"}\");");
+            //mWebView.loadUrl("javascript:LaunchInterface.openSettings();");
         }
     }
 

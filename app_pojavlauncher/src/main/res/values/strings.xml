@@ -375,4 +375,5 @@
     <string name="setings_control">Control settings</string>
     <string name="reset_to_default">Reset to defaults</string>
     <string name="open_game_dir_btn">Open game directory</string>
+    <string name="cancel_btn">Cancel</string>
 </resources>
