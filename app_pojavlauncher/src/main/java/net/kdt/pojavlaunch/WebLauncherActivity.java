@@ -12,7 +12,6 @@ import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import androidx.appcompat.app.AppCompatActivity;
 
 import net.kdt.pojavlaunch.lifecycle.ContextExecutor;
 import net.kdt.pojavlaunch.progresskeeper.ProgressKeeper;
@@ -74,7 +73,7 @@ public class WebLauncherActivity extends BaseActivity implements TaskPriorityMan
 
         if(savedInstanceState != null) mWebView.restoreState(savedInstanceState);
         else {
-            mWebView.loadUrl("javascript:LaunchInterface.startGame(\"{\\\"versionId\\\":\\\"1.12.2\\\"}\");");
+            mWebView.loadUrl("javascript:LaunchInterface.startGame(\"{\\\"versionId\\\":\\\"hitech\\\", \\\"gameDir\\\":\\\"./hitech\\\", \\\"version\\\": {\\\"url\\\":\\\"https://launcher.cubixworld.mobi/profiles/hitech.json\\\", \\\"id\\\":\\\"hitech\\\"}}\");");
             //mWebView.loadUrl("javascript:LaunchInterface.openSettings();");
         }
     }
